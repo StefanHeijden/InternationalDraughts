@@ -173,5 +173,31 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
 
     /** A method that evaluates the given state. */
     // ToDo: write an appropriate evaluation function
-    int evaluate(DraughtsState state) { return 0; }
+    int evaluate(DraughtsState state) { 
+        //obtain pieces array
+        int[] pieces = state.getPieces();
+        
+        // compute a value for t h i s s t a t e , e . g .
+        // by comparing p[ i ] to WHITEPIECE, WHITEKING, e t c
+        int computedValue = 0;
+        for (int piece : pieces) {
+        switch (piece) {
+            case 0: // empty spot
+                break;
+            case 1: // piece is a white piece
+                computedValue++;
+                break;
+            case 2: // piece is a white king
+                computedValue = computedValue + 2;
+                break;
+            case 3: // piece is a black piece
+                computedValue--;
+                break;
+            case 4: // piece is a black king
+                computedValue = computedValue - 2;
+                break;
+        }         
+        }
+        return computedValue ;
+    }
 }
