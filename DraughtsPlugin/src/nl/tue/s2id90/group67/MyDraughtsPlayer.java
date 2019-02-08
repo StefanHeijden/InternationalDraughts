@@ -1,4 +1,4 @@
-package nl.tue.s2id90.groupNN;
+package nl.tue.s2id90.group67;
 
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Integer.MIN_VALUE;
@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import nl.tue.s2id90.draughts.DraughtsState;
 import nl.tue.s2id90.draughts.player.DraughtsPlayer;
+import nl.tue.s2id90.group67.AIStoppedException;
 import org10x10.dam.game.Move;
 
 /**
