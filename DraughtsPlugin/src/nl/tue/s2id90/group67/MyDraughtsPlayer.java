@@ -8,6 +8,7 @@ import nl.tue.s2id90.draughts.DraughtsState;
 import nl.tue.s2id90.draughts.player.DraughtsPlayer;
 import nl.tue.s2id90.group67.AIStoppedException;
 import org10x10.dam.game.Move;
+import java.lang.Math.*;
 
 /**
  * Implementation of the DraughtsPlayer interface.
@@ -117,10 +118,28 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         if (stopped) { stopped = false; throw new AIStoppedException(); }
         DraughtsState state = node.getState();
         // ToDo: write an alphabeta search to compute bestMove and value
-        Move bestMove = state.getMoves().get(0);
-        int value = 0;
-        node.setBestMove(bestMove);
-        return value;
+        List<Move> newMoves = state.getMoves();
+        if (depth == maxSearchDepth || newMoves.isEmpty()) {
+            return evaluate(state);
+        }
+        Move currentBestMove = newMoves.get(0);
+        while (!newMoves.isEmpty()) {
+            state.doMove(newMoves.get(0));
+            DraughtsNode newNode = new DraughtsNode(state);
+            state.undoMove(newMoves.get(0));
+            int newAlpha = alphaBetaMax(newNode, alpha, beta, depth + 1);
+            if (newAlpha > alpha) {
+                currentBestMove = newMoves.get(0);
+                alpha = newAlpha;
+            }
+            if (alpha >= beta) {
+                node.setBestMove(newMoves.get(0));
+                return beta;
+            }
+            newMoves.remove(0);
+        }
+        node.setBestMove(currentBestMove);
+        return alpha;
      }
     
     int alphaBetaMax(DraughtsNode node, int alpha, int beta, int depth)
@@ -128,10 +147,28 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         if (stopped) { stopped = false; throw new AIStoppedException(); }
         DraughtsState state = node.getState();
         // ToDo: write an alphabeta search to compute bestMove and value
-        Move bestMove = state.getMoves().get(0);
-        int value = 0;
-        node.setBestMove(bestMove);
-        return value;
+        List<Move> newMoves = state.getMoves();
+        if (depth == maxSearchDepth || newMoves.isEmpty()) {
+            return evaluate(state);
+        }
+        Move currentBestMove = newMoves.get(0);
+        while (!newMoves.isEmpty()) {
+            state.doMove(newMoves.get(0));
+            DraughtsNode newNode = new DraughtsNode(state);
+            state.undoMove(newMoves.get(0));
+            int newBeta = alphaBetaMin(newNode, alpha, beta, depth + 1);
+            if (newBeta < beta) {
+                currentBestMove = newMoves.get(0);
+                alpha = newBeta;
+            }
+            if (beta <= alpha) {
+                node.setBestMove(newMoves.get(0));
+                return alpha;
+            }
+            newMoves.remove(0);
+        }
+        node.setBestMove(currentBestMove);
+        return beta;
     }
 
     /** A method that evaluates the given state. */
