@@ -139,6 +139,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
             newMoves.remove(0);
         }
         node.setBestMove(currentBestMove);
+        
         return alpha;
      }
     
@@ -159,7 +160,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
             int newBeta = alphaBetaMin(newNode, alpha, beta, depth - 1);
             if (newBeta < beta) {
                 currentBestMove = newMoves.get(0);
-                alpha = newBeta;
+                beta = newBeta;
             }
             if (beta <= alpha) {
                 node.setBestMove(newMoves.get(0));
@@ -184,20 +185,22 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         switch (piece) {
             case 0: // empty spot
                 break;
-            case 1: // piece is a white piece
+            case DraughtsState.WHITEPIECE: // piece is a white piece
                 computedValue++;
                 break;
-            case 2: // piece is a white king
-                computedValue = computedValue + 2;
-                break;
-            case 3: // piece is a black piece
+            case DraughtsState.BLACKPIECE: // piece is a black piece
                 computedValue--;
                 break;
-            case 4: // piece is a black king
+            case DraughtsState.WHITEKING: // piece is a white king
+                computedValue = computedValue + 2;
+                break;
+            case DraughtsState.BLACKKING: // piece is a black king
                 computedValue = computedValue - 2;
                 break;
         }         
-        }
+            
+        }   
+        System.err.println(computedValue);
         return computedValue ;
     }
 }
