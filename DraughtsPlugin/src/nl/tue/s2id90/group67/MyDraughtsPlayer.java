@@ -33,18 +33,24 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         bestValue = 0;
         DraughtsNode node = new DraughtsNode(s);    // the root of the search tree
         try {
-            // compute bestMove and bestValue in a call to alphabeta
-            bestValue = alphaBeta(node, MIN_VALUE, MAX_VALUE, maxSearchDepth);
-            
-            // store the bestMove found uptill now
-            // NB this is not done in case of an AIStoppedException in alphaBeat()
-            bestMove  = node.getBestMove();
-            
-            // print the results for debugging reasons
-            System.err.format(
+            // Iterative Deepening on AlphaBeta 
+            int depth = 1;
+            while(true) {
+                // compute bestMove and bestValue in a call to alphabeta
+                bestValue = alphaBeta(node, MIN_VALUE, MAX_VALUE, depth);
+                
+                // store the bestMove found uptill now
+                // NB this is not done in case of an AIStoppedException in alphaBeat()
+                bestMove  = node.getBestMove();
+                
+                // print the results for debugging reasons
+                System.err.format(
                 "%s: depth= %2d, best move = %5s, value=%d\n", 
-                this.getClass().getSimpleName(),maxSearchDepth, bestMove, bestValue
-            );
+                this.getClass().getSimpleName(),depth, bestMove, bestValue
+                );
+                // Increase depth
+                depth++;
+            }
         } catch (AIStoppedException ex) {  /* nothing to do */  }
         
         if (bestMove==null) {
