@@ -119,7 +119,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         DraughtsState state = node.getState();
         // ToDo: write an alphabeta search to compute bestMove and value
         List<Move> newMoves = state.getMoves();
-        if (depth == maxSearchDepth || newMoves.isEmpty()) {
+        if (depth == 0 || newMoves.isEmpty()) {
             return evaluate(state);
         }
         Move currentBestMove = newMoves.get(0);
@@ -127,7 +127,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
             state.doMove(newMoves.get(0));
             DraughtsNode newNode = new DraughtsNode(state);
             state.undoMove(newMoves.get(0));
-            int newAlpha = alphaBetaMax(newNode, alpha, beta, depth + 1);
+            int newAlpha = alphaBetaMax(newNode, alpha, beta, depth - 1);
             if (newAlpha > alpha) {
                 currentBestMove = newMoves.get(0);
                 alpha = newAlpha;
@@ -148,7 +148,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         DraughtsState state = node.getState();
         // ToDo: write an alphabeta search to compute bestMove and value
         List<Move> newMoves = state.getMoves();
-        if (depth == maxSearchDepth || newMoves.isEmpty()) {
+        if (depth == 0 || newMoves.isEmpty()) {
             return evaluate(state);
         }
         Move currentBestMove = newMoves.get(0);
@@ -156,7 +156,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
             state.doMove(newMoves.get(0));
             DraughtsNode newNode = new DraughtsNode(state);
             state.undoMove(newMoves.get(0));
-            int newBeta = alphaBetaMin(newNode, alpha, beta, depth + 1);
+            int newBeta = alphaBetaMin(newNode, alpha, beta, depth - 1);
             if (newBeta < beta) {
                 currentBestMove = newMoves.get(0);
                 alpha = newBeta;
