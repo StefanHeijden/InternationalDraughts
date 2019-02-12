@@ -113,11 +113,11 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
      * @return the compute value of this node
      * @throws AIStoppedException thrown whenever the boolean stopped has been set to true.
      */
-     int alphaBetaMin(DraughtsNode node, int alpha, int beta, int depth)
+     int alphaBetaMax(DraughtsNode node, int alpha, int beta, int depth)
             throws AIStoppedException {
         if (stopped) { stopped = false; throw new AIStoppedException(); }
         DraughtsState state = node.getState();
-        // ToDo: write an alphabeta search to compute bestMove and value
+        //String test = "min " + depth + ": ";
         List<Move> newMoves = state.getMoves();
         if (depth == 0 || newMoves.isEmpty()) {
             return evaluate(state);
@@ -126,28 +126,30 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         while (!newMoves.isEmpty()) {
             state.doMove(newMoves.get(0));
             DraughtsNode newNode = new DraughtsNode(state);
-            state.undoMove(newMoves.get(0));
             int newAlpha = alphaBetaMax(newNode, alpha, beta, depth - 1);
+            //test += newAlpha + " ";
+            state.undoMove(newMoves.get(0));
             if (newAlpha > alpha) {
                 currentBestMove = newMoves.get(0);
                 alpha = newAlpha;
             }
             if (alpha >= beta) {
                 node.setBestMove(newMoves.get(0));
+                //System.out.println(test);
                 return beta;
             }
             newMoves.remove(0);
         }
         node.setBestMove(currentBestMove);
-        
+        //System.out.println(test);
         return alpha;
      }
     
-    int alphaBetaMax(DraughtsNode node, int alpha, int beta, int depth)
+    int alphaBetaMin(DraughtsNode node, int alpha, int beta, int depth)
             throws AIStoppedException {
         if (stopped) { stopped = false; throw new AIStoppedException(); }
         DraughtsState state = node.getState();
-        // ToDo: write an alphabeta search to compute bestMove and value
+        //String test = "max " + depth + ": ";
         List<Move> newMoves = state.getMoves();
         if (depth == 0 || newMoves.isEmpty()) {
             return evaluate(state);
@@ -156,19 +158,22 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         while (!newMoves.isEmpty()) {
             state.doMove(newMoves.get(0));
             DraughtsNode newNode = new DraughtsNode(state);
-            state.undoMove(newMoves.get(0));
             int newBeta = alphaBetaMin(newNode, alpha, beta, depth - 1);
+            //test += newBeta + " ";
+            state.undoMove(newMoves.get(0));
             if (newBeta < beta) {
                 currentBestMove = newMoves.get(0);
                 beta = newBeta;
             }
             if (beta <= alpha) {
                 node.setBestMove(newMoves.get(0));
+                //System.out.println(test);
                 return alpha;
             }
             newMoves.remove(0);
         }
         node.setBestMove(currentBestMove);
+        //System.out.println(test);
         return beta;
     }
 
@@ -199,8 +204,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
                 break;
         }         
             
-        }   
-        System.err.println(computedValue);
+        }
         return computedValue ;
     }
 }
