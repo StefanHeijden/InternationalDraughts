@@ -35,7 +35,8 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         try {
             // Iterative Deepening on AlphaBeta 
             int depth = 1;
-            while(true) {
+            
+            while(true) { 
                 // compute bestMove and bestValue in a call to alphabeta
                 bestValue = alphaBeta(node, MIN_VALUE, MAX_VALUE, depth);
                 
@@ -121,39 +122,66 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
      */
      int alphaBetaMax(DraughtsNode node, int alpha, int beta, int depth)
             throws AIStoppedException {
-        if (stopped) { stopped = false; throw new AIStoppedException(); }
+        // Stop the search if a certain amount of time has passed
+        if (stopped) { 
+            stopped = false; 
+            System.out.println("stopped in AlphaBetaMax");
+            throw new AIStoppedException(); 
+        }
+        
+        // Get the current state of the board
         DraughtsState state = node.getState();
-        //String test = "min " + depth + ": ";
+        
+        // Get the current moves for the state
         List<Move> newMoves = state.getMoves();
+        
+        // If no moves are possible return the evaluation of the current state
         if (depth == 0 || newMoves.isEmpty()) {
             return evaluate(state);
         }
+        
+        // Evaluate each possible move for the state of the board
         Move currentBestMove = newMoves.get(0);
-        while (!newMoves.isEmpty()) {
+        while (!newMoves.isEmpty()) { // Continue untill no new moves are found
+            
+            // Set the state of the board to after doing the next move in the list
             state.doMove(newMoves.get(0));
             DraughtsNode newNode = new DraughtsNode(state);
-            int newAlpha = alphaBetaMax(newNode, alpha, beta, depth - 1);
-            //test += newAlpha + " ";
+            
+            // Get the best move of the opponent
+            int newAlpha = alphaBetaMin(newNode, alpha, beta, depth - 1);
+            
+            // Set the state of the board to before the next move
             state.undoMove(newMoves.get(0));
+            
+            // Check whether the next move is better then the previous ones
             if (newAlpha > alpha) {
                 currentBestMove = newMoves.get(0);
                 alpha = newAlpha;
             }
+            //.....
             if (alpha >= beta) {
                 node.setBestMove(newMoves.get(0));
-                //System.out.println(test);
                 return beta;
             }
+            // Remove the next move in the list
             newMoves.remove(0);
         }
+        
+        // Save the best move and alpha of that move
         node.setBestMove(currentBestMove);
-        //System.out.println(test);
         return alpha;
      }
+     
     
     int alphaBetaMin(DraughtsNode node, int alpha, int beta, int depth)
             throws AIStoppedException {
-        if (stopped) { stopped = false; throw new AIStoppedException(); }
+        if (stopped) { 
+            stopped = false; 
+            System.out.println("stopped in AlphaBetaMin");
+            throw new AIStoppedException(); 
+        }
+        
         DraughtsState state = node.getState();
         //String test = "max " + depth + ": ";
         List<Move> newMoves = state.getMoves();
@@ -164,7 +192,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         while (!newMoves.isEmpty()) {
             state.doMove(newMoves.get(0));
             DraughtsNode newNode = new DraughtsNode(state);
-            int newBeta = alphaBetaMin(newNode, alpha, beta, depth - 1);
+            int newBeta = alphaBetaMax(newNode, alpha, beta, depth - 1);
             //test += newBeta + " ";
             state.undoMove(newMoves.get(0));
             if (newBeta < beta) {
@@ -178,6 +206,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
             }
             newMoves.remove(0);
         }
+        
         node.setBestMove(currentBestMove);
         //System.out.println(test);
         return beta;
