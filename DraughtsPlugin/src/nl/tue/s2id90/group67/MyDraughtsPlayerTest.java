@@ -4,6 +4,7 @@ import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Integer.MIN_VALUE;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
 import nl.tue.s2id90.draughts.DraughtsState;
 import nl.tue.s2id90.draughts.player.DraughtsPlayer;
 import nl.tue.s2id90.group67.AIStoppedException;
@@ -19,7 +20,12 @@ import java.lang.Math.*;
 public class MyDraughtsPlayerTest  extends DraughtsPlayer{
     private int bestValue=0;
     int maxSearchDepth;
-
+    Move[][] listOfPreviousMoves;
+    int[] alpha;
+    int[] beta;
+    int currentDepth;
+    boolean whiteIsToMove;
+    
     /** boolean that indicates that the GUI asked the player to stop thinking. */
     private boolean stopped;
 
@@ -27,46 +33,145 @@ public class MyDraughtsPlayerTest  extends DraughtsPlayer{
         super("best.png"); // ToDo: replace with your own icon
         this.maxSearchDepth = maxSearchDepth;
     }
-
+    
     @Override public Move getMove(DraughtsState s) {
         Move bestMove = null;
         bestValue = 0;
+        maxSearchDepth = 20; // Make sure this is even!!
         DraughtsNode node = new DraughtsNode(s);    // the root of the search tree
-        try {
-            // Iterative Deepening on AlphaBeta
-            int depth = 1;
+        // Get the current state of the board
+        DraughtsState state = node.getState();
+        whiteIsToMove = state.isWhiteToMove();
+        
+        // Get the current moves for the state
+        List<Move> firstMoves = state.getMoves();
+        Collections.shuffle(firstMoves);
+        // put a if statement for if no moves are found????
+        
+        // This list is used to remember the all the bestmoves for each move
+        listOfPreviousMoves = new Move[firstMoves.size()][];
 
-            while(depth <= 7) {
-                // compute bestMove and bestValue in a call to alphabeta
-                bestValue = alphaBeta(node, MIN_VALUE, MAX_VALUE, depth);
-
-                // store the bestMove found uptill now
-                // NB this is not done in case of an AIStoppedException in alphaBeat()
-                bestMove  = node.getBestMove();
-
-                // print the results for debugging reasons
-                System.err.format(
-                "%s: depth= %2d, best move = %5s, value=%d\n",
-                this.getClass().getSimpleName(),depth, bestMove, bestValue
-                );
-                // Increase depth
-                depth++;
+        // Initialize the lists of alphas, betas and PreviousMoves
+        // and add the current moves to the listOfPreviousMoves
+        alpha = new int[firstMoves.size()];
+        beta = new int[firstMoves.size()];
+        
+        for(int i=0;i<firstMoves.size();i++){
+            listOfPreviousMoves[i] = new Move[maxSearchDepth + 1];
+            listOfPreviousMoves[i][0] = firstMoves.get(i);
+            alpha[i] = Integer.MIN_VALUE;
+            beta[i] = Integer.MAX_VALUE;
+        }
+        System.out.println("=================================="
+            + "=== start move =====================================");
+        try {           
+            // Iterative Deepening on AlphaBeta 
+            currentDepth = 1;
+            while(currentDepth <= maxSearchDepth) {
+                System.out.println("---------------------- " + currentDepth +  " ----------------------------");
+                int index = 0;
+                //List<List<Move>> copyOfListOfPreviousMoves = listOfPreviousMoves;
+                for(Move[] moveList : listOfPreviousMoves) {
+                    System.out.println("");
+                    DraughtsNode newNode = new DraughtsNode(s); 
+                    DraughtsState newState = null;
+                    List<Move> reverseList = new ArrayList<Move>();
+                    for(Move m : moveList) {
+                        // If the next move exist
+                        if(m != null) {
+                            reverseList.add(0,m);
+                            System.out.print(m + " ");
+                            // Set the state of the board to after doing the next move in the list
+                            newState = newNode.getState();
+                            newState.doMove(m);
+                            newNode = new DraughtsNode(newState);
+                        // If there are no more moves
+                        }else {
+                            // compute bestMove and bestValue in a call to alphabeta
+                            newState = newNode.getState();
+                            alphaBeta(newState, index);
+                            break;   
+                        }
+                    }
+                    for(Move m : reverseList) {
+                       newState.undoMove(m);
+                    }
+                    
+                    index++;
+                }
+                currentDepth++;
+                
+                // for testing only, not neccessary in real run
+                bestMove = calcBestMove();
             }
-        } catch (AIStoppedException ex) {  /* nothing to do */  }
-
+        } catch (AIStoppedException ex) {
+            
+            System.out.println("Stopped in getMove()");
+        }
+    
+        bestMove = calcBestMove();
+        System.out.println("=================================="
+            + "=== ========== =====================================");
         if (bestMove==null) {
             System.err.println("no valid move found!");
             return getRandomValidMove(s);
         } else {
             return bestMove;
         }
+    } 
+    
+    
+    Move calcBestMove() {
+        int indexForBestMove = 0;
+        if (whiteIsToMove) {
+            bestValue = alpha[0];
+            for(int i = 1;i<listOfPreviousMoves.length;i++) {
+                if(alpha[i] > bestValue) {
+                    bestValue = alpha[i];
+                    indexForBestMove = i;
+                }
+                if(alpha[i] == bestValue && Math.random() > 0.5) {
+                    bestValue = alpha[i];
+                    indexForBestMove = i;
+                }
+            }
+        } else  {
+            System.out.println("Black move");
+            bestValue = beta[0];
+            for(int i = 1;i<listOfPreviousMoves.length;i++) {
+                if(beta[i] < bestValue) {
+                    bestValue = beta[i];
+                    indexForBestMove = i;
+                }
+                if(beta[i] == bestValue && Math.random() > 0.5) {
+                    bestValue = beta[i];
+                    indexForBestMove = i;
+                }
+            }
+        }
+        
+        // print the results for debugging reasons
+        //System.err.format(
+        //"%s: depth= %2d, best move = %5s, value=%d\n", 
+        //this.getClass().getSimpleName(),currentDepth - 1, 
+        //listOfPreviousMoves[indexForBestMove][0], bestValue
+        //);
+        System.out.println(" best move " + 
+                listOfPreviousMoves[indexForBestMove][0] + " best value " + bestValue);
+        System.out.println("");
+        for(Move m : listOfPreviousMoves[indexForBestMove]) {
+            System.out.print(m + " ");
+        }
+        System.out.println("");
+        
+        return listOfPreviousMoves[indexForBestMove][0];
     }
 
     /** This method's return value is displayed in the AICompetition GUI.
-     *
-     * @return the value for the draughts state s as it is computed in a call to getMove(s).
+     * 
+     * @return the value for the draughts state s as it is computed in a call to getMove(s). 
      */
-    @Override public Integer getValue() {
+    @Override public Integer getValue() { 
        return bestValue;
     }
 
@@ -74,16 +179,16 @@ public class MyDraughtsPlayerTest  extends DraughtsPlayer{
      * throws an AIStoppedException when boolean stopped is set to true;
     **/
     @Override public void stop() {
-       stopped = true;
+       stopped = true; 
     }
-
+    
     /** returns random valid move in state s, or null if no moves exist. */
     Move getRandomValidMove(DraughtsState s) {
         List<Move> moves = s.getMoves();
         Collections.shuffle(moves);
         return moves.isEmpty()? null : moves.get(0);
     }
-
+    
     /** Implementation of alphabeta that automatically chooses the white player
      *  as maximizing player and the black player as minimizing player.
      * @param node contains DraughtsState and has field to which the best move can be assigned.
@@ -93,19 +198,19 @@ public class MyDraughtsPlayerTest  extends DraughtsPlayer{
      * @return the computed value of this node
      * @throws AIStoppedException
      **/
-    int alphaBeta(DraughtsNode node, int alpha, int beta, int depth)
+    void alphaBeta(DraughtsState state, int index)
             throws AIStoppedException
     {
-        if (node.getState().isWhiteToMove()) {
-            return alphaBetaMax(node, alpha, beta, depth);
+        if (state.isWhiteToMove()) {
+            alphaBetaMax(state, index);
         } else  {
-            return alphaBetaMin(node, alpha, beta, depth);
+             alphaBetaMin(state, index);
         }
     }
-
+    
     /** Does an alphabeta computation with the given alpha and beta
      * where the player that is to move in node is the minimizing player.
-     *
+     * 
      * <p>Typical pieces of code used in this method are:
      *     <ul> <li><code>DraughtsState state = node.getState()</code>.</li>
      *          <li><code> state.doMove(move); .... ; state.undoMove(move);</code></li>
@@ -120,104 +225,113 @@ public class MyDraughtsPlayerTest  extends DraughtsPlayer{
      * @return the compute value of this node
      * @throws AIStoppedException thrown whenever the boolean stopped has been set to true.
      */
-     int alphaBetaMax(DraughtsNode node, int alpha, int beta, int depth)
+     void alphaBetaMax(DraughtsState state, int index)
             throws AIStoppedException {
         // Stop the search if a certain amount of time has passed
-        if (stopped) {
-            stopped = false;
+        if (stopped) { 
+            stopped = false; 
             System.out.println("stopped in AlphaBetaMax");
-            throw new AIStoppedException();
+            throw new AIStoppedException(); 
         }
-
-        // Get the current state of the board
-        DraughtsState state = node.getState();
-
-        // Get the current moves for the state
-        List<Move> newMoves = state.getMoves();
-
+        
+        // Retreive the available moves for this state
+        List<Move> moves = state.getMoves();
+        
         // If no moves are possible return the evaluation of the current state
-        if (depth == 0 || newMoves.isEmpty()) {
-            return evaluate(state);
-        }
-
-        // Evaluate each possible move for the state of the board
-        Move currentBestMove = newMoves.get(0);
-        while (!newMoves.isEmpty()) { // Continue untill no new moves are found
-
-            // Set the state of the board to after doing the next move in the list
-            state.doMove(newMoves.get(0));
-            DraughtsNode newNode = new DraughtsNode(state);
-
-            // Get the best move of the opponent
-            int newAlpha = alphaBetaMin(newNode, alpha, beta, depth - 1);
-
-            // Set the state of the board to before the next move
-            state.undoMove(newMoves.get(0));
-
-            // Check whether the next move is better then the previous ones
-            if (newAlpha > alpha) {
-                currentBestMove = newMoves.get(0);
-                alpha = newAlpha;
+        if (moves.isEmpty()) {// Heb je hier niet gewoon verloren of gewonnen?
+            
+        }else{
+            // Evaluate each possible move for the state of the board
+            Move currentBestMove = moves.get(0);
+            System.out.println();
+            for (Move m : moves) { // Continue untill no new moves are found
+                
+                // Evaluate the the result of the next move
+                int result = evaluateMove(state, m);
+                System.out.print(" move: " + m + " result: " + result);
+                
+                // Check whether the next move is better then the previous ones
+                if (result > alpha[index]) {
+                    currentBestMove = m;
+                    alpha[index] = result;
+                }
+                //.....
+                if (beta[index] <= alpha[index]) {
+                    currentBestMove = m;
+                    alpha[index] = beta[index];
+                    break;
+                }
             }
-            //.....
-            if (alpha >= beta) {
-                node.setBestMove(newMoves.get(0));
-                return beta;
-            }
-            // Remove the next move in the list
-            newMoves.remove(0);
+            // Save the best move
+            System.out.println(" best move: " + currentBestMove + " alpha: " + alpha[index]);
+            listOfPreviousMoves[index][currentDepth] = currentBestMove;
         }
-
-        // Save the best move and alpha of that move
-        node.setBestMove(currentBestMove);
-        return alpha;
      }
 
-
-    int alphaBetaMin(DraughtsNode node, int alpha, int beta, int depth)
+    void alphaBetaMin(DraughtsState state, int index)
             throws AIStoppedException {
-        if (stopped) {
-            stopped = false;
+        if (stopped) { 
+            stopped = false; 
             System.out.println("stopped in AlphaBetaMin");
-            throw new AIStoppedException();
+            throw new AIStoppedException(); 
         }
 
-        DraughtsState state = node.getState();
-        //String test = "max " + depth + ": ";
-        List<Move> newMoves = state.getMoves();
-        if (depth == 0 || newMoves.isEmpty()) {
-            return evaluate(state);
-        }
-        Move currentBestMove = newMoves.get(0);
-        while (!newMoves.isEmpty()) {
-            state.doMove(newMoves.get(0));
-            DraughtsNode newNode = new DraughtsNode(state);
-            int newBeta = alphaBetaMax(newNode, alpha, beta, depth - 1);
-            //test += newBeta + " ";
-            state.undoMove(newMoves.get(0));
-            if (newBeta < beta) {
-                currentBestMove = newMoves.get(0);
-                beta = newBeta;
+        // Retreive the available moves for this state
+        List<Move> moves = state.getMoves();
+        
+        // If no moves are possible return the evaluation of the current state
+        if (moves.isEmpty()) {// Heb je hier niet gewoon verloren of gewonnen?
+            //System.out.println("No moves found");
+        }else{
+            // Evaluate each possible move for the state of the board
+            Move currentBestMove = moves.get(0);
+            System.out.println();
+            for (Move m : moves) { // Continue untill no new moves are found
+                
+                // Evaluate the the result of the next move
+                int result = evaluateMove(state, m);
+                System.out.print(" move: " + m + " result: " + result);
+                
+                // Check whether the next move is better then the previous ones
+                if (result < beta[index]) {
+                    currentBestMove = m;
+                    beta[index] = result;
+                }
+                //.....
+                if (beta[index] <= alpha[index]) {
+                    currentBestMove = m;
+                    beta[index] = alpha[index];
+                    break;
+                }
             }
-            if (beta <= alpha) {
-                node.setBestMove(newMoves.get(0));
-                //System.out.println(test);
-                return alpha;
-            }
-            newMoves.remove(0);
+            // Save the best move
+            System.out.println(" best move: " + currentBestMove + " beta: " + beta[index]);
+            listOfPreviousMoves[index][currentDepth] = currentBestMove;
         }
-
-        node.setBestMove(currentBestMove);
-        //System.out.println(test);
-        return beta;
     }
+    
+      /** A method that evaluates the given state after a certain move. */
+      int evaluateMove(DraughtsState state, Move m) {
+        // Set the state of the board to after doing the next move in the list
+        state.doMove(m);
+        DraughtsNode newNode = new DraughtsNode(state);
+
+        // Evaluate the current state
+        int result = evaluate(newNode.getState());
+
+        // Set the state of the board to before the next move
+        state.undoMove(m);
+        
+        return result;
+      }
 
     /** A method that evaluates the given state. */
     // ToDo: write an appropriate evaluation function
-    int evaluate(DraughtsState state) {
+    int evaluate(DraughtsState state) { 
         //obtain pieces array
         int[] pieces = state.getPieces();
-
+        boolean whiteWins = true;
+        boolean blackWins = true;
         // compute a value for t h i s s t a t e , e . g .
         // by comparing p[ i ] to WHITEPIECE, WHITEKING, e t c
         int computedValue = 0;
@@ -227,19 +341,32 @@ public class MyDraughtsPlayerTest  extends DraughtsPlayer{
                 break;
             case DraughtsState.WHITEPIECE: // piece is a white piece
                 computedValue++;
+                blackWins = false;
                 break;
             case DraughtsState.BLACKPIECE: // piece is a black piece
                 computedValue--;
+                whiteWins = false;
                 break;
             case DraughtsState.WHITEKING: // piece is a white king
-                computedValue = computedValue + 2;
+                computedValue = computedValue + 4;
+                blackWins = false;
                 break;
             case DraughtsState.BLACKKING: // piece is a black king
-                computedValue = computedValue - 2;
+                computedValue = computedValue - 4;
+                whiteWins = false;
                 break;
         }
-
+        
+        // Check whether white or black wins with this move
+        if (whiteWins) {
+            computedValue = computedValue + 1000;
+        }
+        if(blackWins) {
+            computedValue = computedValue - 1000;
+        }
+        
         }
         return computedValue ;
     }
+    
 }
