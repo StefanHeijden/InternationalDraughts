@@ -224,12 +224,12 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         //obtain pieces array
         int[] pieces = state.getPieces();
         
-        // compute a value for t h i s s t a t e , e . g .
-        // by comparing p[ i ] to WHITEPIECE, WHITEKING, e t c
         int computedValue = 0;
         int nPieces = 0;
         int nSpot = 1;
         boolean middle = false;
+        
+        //Check each square on the board for a piece, add points for white, remove points for black.
         for (int piece : pieces) {
             switch (piece) {
                 case 0: // empty spot
@@ -258,17 +258,20 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
                     break;
             }         
             nSpot++;
+            //Pieces in spots 21-24 and 27-30 are worth more to encourage the AI to take control of the center. 
             if (nSpot == 21 || nSpot == 27) {
                 middle = true;
-            } else if (nSpot == 26 || nSpot == 31) {
+            } else if (nSpot == 25 || nSpot == 31) {
                 middle = false;
             }
         }
+        // If the AI is winning, it should try to trade 1 for 1 as leads are more important with less pieces on the board. 
+        // Thus we remove points when there are alot of pieces left and you're winning. 
         if (improved) {
             if (computedValue < -19) {
-                computedValue = computedValue - nPieces / 4;
-            } else if (computedValue > 19) {
                 computedValue = computedValue + nPieces / 4;
+            } else if (computedValue > 19) {
+                computedValue = computedValue - nPieces / 4;
             }
                 
         }
