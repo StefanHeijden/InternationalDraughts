@@ -25,7 +25,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
 
     public MyDraughtsPlayer(int maxSearchDepth) {
         super("best.png"); // ToDo: replace with your own icon
-        this.maxSearchDepth = maxSearchDepth;
+        //this.maxSearchDepth = maxSearchDepth;
     }
 
     @Override public Move getMove(DraughtsState s) {
@@ -55,7 +55,6 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         if (bestMove==null) {
             return getRandomValidMove(s);
         } else {
-            System.out.println("bestMove: " + bestMove + " bestValue: " + bestValue);
             return bestMove;
         }
     }
@@ -279,33 +278,63 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
      }
 
     /** A method that evaluates the given state. */
-    // ToDo: write an appropriate evaluation function
     int evaluate(DraughtsState state) {
-        //obtain pieces array
-        int[] pieces = state.getPieces();
-
-        // compute a value for t h i s s t a t e , e . g .
-        // by comparing p[ i ] to WHITEPIECE, WHITEKING, e t c
-        int computedValue = 0;
+        int[] pieces = state.getPieces(); // Obtain pieces array
+        int computedValue = 0; // The total value of the board
+        int kingWorth = 30; // Kings are worth more than poins
+        int nPieces = 0; // Number of pieces on the board
+        // Number of the spot of the board from 1 to 50
+        // Since the first spot is not used in int[] pieces, start with 0
+        int nSpot = 0;
+        boolean middle = false; // Whether the piece is in the middle of the board
+        // Check each square on the board for a piece, 
+        // add points for white, remove points for black.
         for (int piece : pieces) {
-        switch (piece) {
-            case 0: // empty spot
-                break;
-            case DraughtsState.WHITEPIECE: // piece is a white piece
-                computedValue++;
-                break;
-            case DraughtsState.BLACKPIECE: // piece is a black piece
-                computedValue--;
-                break;
-            case DraughtsState.WHITEKING: // piece is a white king
-                computedValue = computedValue + 2;
-                break;
-            case DraughtsState.BLACKKING: // piece is a black king
-                computedValue = computedValue - 2;
-                break;
+            // Pieces in spots 21-24 and 27-30 are worth more 
+            // to encourage the AI to take control of the center. 
+            if (nSpot == 21 || nSpot == 27) {
+                middle = true;
+            } else if (nSpot == 25 || nSpot == 31) {
+                middle = false;
+            }
+            nSpot++;
+            // Calculate the value of the piece at the location
+            switch (piece) {
+                case 0: // empty spot, not worth anything
+                    break;
+                case DraughtsState.WHITEPIECE: // piece is a white piece
+                    computedValue = computedValue + 10;
+                    if (middle) {
+                        computedValue++;
+                    }
+                    nPieces++;
+                    break;
+                case DraughtsState.BLACKPIECE: // piece is a black piece
+                    computedValue = computedValue - 10;
+                    if (middle ) {
+                        computedValue--;
+                    }
+                    nPieces++;
+                    break;
+                case DraughtsState.WHITEKING: // piece is a white king
+                    computedValue = computedValue + kingWorth;
+                    nPieces++;  
+                    break;
+                case DraughtsState.BLACKKING: // piece is a black king
+                    computedValue = computedValue - kingWorth;
+                    nPieces++;
+                    break;
+            }
         }
-
+        // If the AI is winning, it should try to trade 1 for 1 as leads 
+        // are more important with less pieces on the board. Thus we remove
+        // points when there are alot of pieces left and you're winning. 
+        if (computedValue < -19) {
+            computedValue = computedValue + nPieces / 4;
+        } else if (computedValue > 19) {
+            computedValue = computedValue - nPieces / 4;
         }
+        // Return the total value of the board
         return computedValue ;
     }
 }
