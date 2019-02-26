@@ -31,7 +31,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
     @Override public Move getMove(DraughtsState s) {
         Move bestMove = null;
         bestValue = 0;
-        maxSearchDepth = 20;
+        maxSearchDepth = 5;
         DraughtsNode node = new DraughtsNode(s);    // the root of the search tree
         transpositionTable = new TranspositionTable();
         transpositionTable.setBoard(s.getPieces(), s.isWhiteToMove());
@@ -124,21 +124,22 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         int oldType = -1;
         int oldDepth = -1;
         boolean done = false;
+        int hash = transpositionTable.getBoard();
        
         // Get the current state of the board
         DraughtsState state = node.getState();
         // Get the information from the transposition table
-        int[] information = retrieveInformation(0);// state
+         SimpleState information = transpositionTable.retrieve();// state
         // If no information for the state is found set depth to -1
         if(information != null) {
-            oldMove = intToMove(information[0]);
-            result = information[1];
-            oldType = information[2];
-            oldDepth = information[3];
+            oldMove = information.bestMove;
+            result = information.bestScore;
+            oldType = information.type;
+            oldDepth = information.depthSearched;
         }
             
         // If the information of the state has been calculated with enough depth 
-        if(oldDepth >= depth) {
+        if(information != null && information.depthSearched >= depth) {
             // If the move has been calculated exactly
             if(oldType == 0) {
                 return result;
@@ -166,9 +167,14 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         // Check the oldMove first
         if(oldDepth >= 0) {
             state.doMove(oldMove);
+            transpositionTable.doMove(oldMove);
+            
             result = -1 * alphaBeta(new DraughtsNode(state),
                     -1 * beta, -1 * alpha, depth - 1 );
+            
             state.undoMove(oldMove);
+            transpositionTable.undoMove(oldMove);
+            
             currentBestMove = oldMove;
             if(result >= beta) {
                 done = true;
@@ -182,14 +188,16 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
 
             // Set the state of the board to after doing the next move in the list
             state.doMove(newMoves.get(0));
-
+            transpositionTable.doMove(newMoves.get(0));
+            
             // Get the best move of the opponent
             int newAlpha = -1 * alphaBeta(new DraughtsNode(state),
                     -1 * beta, -1 * alpha, depth - 1 );
 
             // Set the state of the board to before the next move
             state.undoMove(newMoves.get(0));
-
+            transpositionTable.undoMove(newMoves.get(0));
+            
             // Check whether the next move is better then the previous ones
             if (newAlpha > alpha) {
                 currentBestMove = newMoves.get(0);
@@ -214,48 +222,16 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
               oldType = 0;
             }
         }
-        storeInformation(stateToInt(state), moveToInt(currentBestMove), result, oldType, depth);
+        /// TESTING PURPOSE
+        if(hash != transpositionTable.getBoard()) {
+            System.out.println("hash not the same!! oldhash: " + 
+                    hash + " new " + transpositionTable.getBoard() );
+        }
+        transpositionTable.store( currentBestMove, result, oldType, depth);
         // Save the best move and alpha of that move
         node.setBestMove(currentBestMove);
         return alpha;
      }
-    
-    // Here we retreive the information of a certain state from the transposition table
-    int[] retrieveInformation(int state, boolean isWhiteToMove) {
-        boolean found = false;
-        // try finding state in transposition table
-        if(found) {
-            int[] information = new int[4];
-            // Get the best move
-            information[0] = 0;
-            // Get the score for that move
-            information[1] = 0;
-            // Whether the score is exact(0), lower bound (1), upper bound (2)
-            information[2] = 0;
-            // max depth with which move was calculated
-            information[3] = 0;
-            return information;
-        }
-        
-        return null;
-    }
-    
-    // Store the information for a state in the transposition table
-    void storeInformation(int state, int move, int score, int type, int depth) {
-        
-    }
-    
-    int stateToInt(DraughtsState state) {
-        return 0;
-    }
-    
-    Move intToMove(int move){
-        return null;
-    }
-    
-    int moveToInt(Move move) {
-        return 0;
-    }
 
     /** A method that evaluates the given state. */
     // ToDo: write an appropriate evaluation function
