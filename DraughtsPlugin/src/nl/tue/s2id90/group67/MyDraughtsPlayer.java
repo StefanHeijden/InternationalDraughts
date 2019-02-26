@@ -29,55 +29,34 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
     }
 
     @Override public Move getMove(DraughtsState s) {
-        Move bestMove = null;
-        bestValue = 0;
-        maxSearchDepth = 12;
+        Move bestMove = null; // Best move for this state
+        bestValue = 0; // Result of the evaluation of the best move
+        maxSearchDepth = 20; // Set max search depth in case of bugs
         DraughtsNode node = new DraughtsNode(s);    // the root of the search tree
+        // Initialize the transposition table, which is used to speed
+        // up searches on the same state
         transpositionTable = new TranspositionTable();
         transpositionTable.setBoard(s.getPieces(), s.isWhiteToMove());
         try {
             // Iterative Deepening on AlphaBeta
             int depth = 1;
-
             while(depth <= maxSearchDepth) {
                 // compute bestMove and bestValue in a call to alphabeta
-                int[] pieces = s.getPieces();
                 bestValue = alphaBeta(node, MIN_VALUE, MAX_VALUE, depth);
-                if(pieces != s.getPieces()) {
-                    System.out.println("error");
-                }
+                
                 // store the bestMove found uptill now
-                // NB this is not done in case of an AIStoppedException in alphaBeat()
                 bestMove  = node.getBestMove();
-
-                // print the results for debugging reasons
-                //System.err.format(
-                //"%s: depth= %2d, best move = %5s, value=%d\n",
-                //this.getClass().getSimpleName(),depth, bestMove, bestValue
-                //);
-                System.out.println("bestMove: " + bestMove + " best Value:  " + bestValue);
-                System.out.println("-------------------------" + depth + 
-                        "-------------------------");
+                
                 // Increase depth
                 depth++;
             }
         } catch (AIStoppedException ex) {  
-            System.out.println("stopped");
         /* nothing to do */  }
-        
         if (bestMove==null) {
-            System.err.println("no valid move found!");
             return getRandomValidMove(s);
         } else {
-            
-            System.out.println("final check");
-            // Check in the end whether the move is a valid
-            List<Move> movelist = s.getMoves();
-            printState(s);
-            if(movelist.contains(bestMove)) {
-                return bestMove;
-            }
-            return getRandomValidMove(s);
+            System.out.println("bestMove: " + bestMove + " bestValue: " + bestValue);
+            return bestMove;
         }
     }
 
@@ -123,41 +102,39 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
      int alphaBeta(DraughtsNode node, int alpha, int beta, int depth)
             throws AIStoppedException {
         // Stop the search if a certain amount of time has passed
-     
         if (stopped) {
             stopped = false;
             System.out.println("stopped in AlphaBeta");
             throw new AIStoppedException();
         }
-       
+        // The evaluation of the best move found so far
         int bestResult;
-        boolean done = false;
-        int hash = transpositionTable.getBoard();
+        // The best move found so far
         Move currentBestMove; 
+        // Done is used if an value is found that is maximum
+        //, thus stopping the search
+        boolean done = false;
         // Get the current state of the board
         DraughtsState state = node.getState();
         boolean whiteTurn = state.isWhiteToMove();
-         
-        // Get the information from the transposition table
-        SimpleState information = transpositionTable.retrieve();// state
         // Get the current moves for the state
         List<Move> newMoves = state.getMoves();
+        // Get the information from the transposition table
+        SimpleState information = transpositionTable.retrieve();
 
         // If no moves are possible return the evaluation of the current state
         if (depth == 0 || newMoves.isEmpty()) {
             return evaluate(state);
         }
         
-        // Hier vindt je soms een move die helemaal niet mogelijk zou moeten zijn
-        // En die komt uit transposition table, maar waar die vandaan komt....------------!!!
+        // This is a check , in case of bugs
         boolean ok = true;
         if(information != null && !newMoves.contains(information.bestMove)) {
-            //System.out.println("This move: " +  information.bestMove + " is not a legal move!!!");
             ok = false;
         }
  
         // If the information of the state has been calculated with enough depth 
-        // then check if the information is valid
+        // and the information is valid, check the precision of the results
         if(ok && information != null && information.depthSearched >= depth) {
             bestResult = information.bestScore;
             // If the move has been calculated exactly
@@ -183,32 +160,42 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
             }
         }
         
-        // Check the oldMove first
+        // Check the oldMove first, since there is a high chance this is the best
+        // move already. This is only done if the there is any (valid) information
+        // about the state.
         if(ok && information != null && information.depthSearched >= 0) {  
-
+            // Do the move
             state.doMove(information.bestMove);
             transpositionTable.doMove(information.bestMove);
             
-
+            // Start calculating the best results for the next moves
             bestResult = alphaBeta(new DraughtsNode(state),
                    alpha, beta, depth - 1 );
             
+            // Undo the move
             state.undoMove(information.bestMove);
             transpositionTable.undoMove(information.bestMove);
             
+            // Safe the move from the transition table as the best move
             currentBestMove = information.bestMove;
+            
+            // Check depending on whos turn it is whether the results
+            // are already the best results by comparing them with alpha/beta
             if(whiteTurn) {
                 if(bestResult >= beta) {
                 done = true;
-            }
-            }else {
+            }}else {
                 if(bestResult <= alpha) {
                     done = true;
                 }
-            }
+            }// if not then continue
         }else {
+            // Safe the first move from the transition table as the best move
+            // just in case there are no good moves
             currentBestMove = newMoves.get(0);
             
+            // How bestResult is initialized depends on whos turn it is
+            // since white will try to get a maximum result and black minimum
             if(whiteTurn) {
                 bestResult = MIN_VALUE;
             }else {
@@ -216,57 +203,17 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
             }
         }
         
+        // Initialize newAlpha and newBeta with alpha and beta
         int newAlpha = alpha;
         int newBeta = beta;
         
         // Evaluate each possible move for the state of the board
         while (!newMoves.isEmpty() && !done) { // Continue untill no new moves are found
             // Set the state of the board to after doing the next move in the list
-            
-            
-            // waarvoor dit is, is dat soms the hash function anders eruit komt
-            // nadat een move is gedaan en teruggezet is
-            // ik had al gekeken en probleem (voor zover ik het kan zien) ligt niet aan
-            // transposition.doing / undoing maar aan het feit dat de board[] in 
-            // transposition table niet overeenkomt met de state.getPieces()
-            
-            /*
-            int testHash = transpositionTable.getBoard();
-            DraughtsState testState = state;
-            printState(state);
-            transpositionTable.printBoard();
-            // DO
-            state.doMove(newMoves.get(0));
-            transpositionTable.doTestMove(newMoves.get(0));
-            printState(state);
-            transpositionTable.printBoard();
-            // UNDO
-            state.undoMove(newMoves.get(0));
-            transpositionTable.undoTestMove(newMoves.get(0)); 
-            printState(state);
-            transpositionTable.printBoard();
-            
-            int newHash = transpositionTable.getBoard();
-            if (testState != state || testHash != newHash) {
-                System.out.println("this move isn't handled correctly: " + newMoves.get(0) + " "
-                        + "----------------------------------------------------------------"
-                        + "-----------------------------------------------------------!!!");
-                System.out.println("Hash: " + hash + " old hash: " + newHash);
-                transpositionTable.setHash(hash);
-                
-                state.doMove(newMoves.get(0));
-                transpositionTable.doTestMove(newMoves.get(0));
-                state.undoMove(newMoves.get(0));
-                transpositionTable.undoTestMove(newMoves.get(0));
-                
-                System.out.println("stop: " + transpositionTable.getBoard());
-            }
-            */
-            // Set the state of the board to after doing the next move in the list
             state.doMove(newMoves.get(0));
             transpositionTable.doMove(newMoves.get(0));
             
-            if(whiteTurn) {
+            if(whiteTurn) {// if it is a maxnode e.g. white turn
                 // Get the best move of the opponent
                 int newResult = alphaBeta(new DraughtsNode(state),
                    newAlpha, beta, depth - 1 );
@@ -284,7 +231,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
                     done = true;
                 }
                 newAlpha = Math.max(newAlpha, bestResult);
-            }else {
+            }else {// if it is a minnode, e.g. black turn
                 // Get the best move of the opponent
                 int newResult = alphaBeta(new DraughtsNode(state),
                    alpha, newBeta, depth - 1 );
@@ -323,13 +270,8 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
               type = 0; // exact
             }
         }
-        /*
-        /// TESTING PURPOSE --------------------------------------------!!!!!!!!
-        if(hash != transpositionTable.getBoard()) {
-            System.out.println("hash not the same!! oldhash: " + 
-                    hash + " new " + transpositionTable.getBoard() );
-        }
-        */
+        // Save the results in the transposition table, as to speed
+        // up future searches on the same state
         transpositionTable.store( currentBestMove, bestResult, type, depth);
         // Save the best move and alpha of that move
         node.setBestMove(currentBestMove);
@@ -365,17 +307,5 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
 
         }
         return computedValue ;
-    }
-    
-    void printState (DraughtsState state) {
-        System.out.println("Print state:: ");
-        int index = 0;
-        for (int i : state.getPieces()) {
-            System.out.print(i + " ");
-            if (index % 5 == 0) {
-                System.out.println();
-            }
-            index++;
-        }
     }
 }
