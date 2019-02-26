@@ -71,13 +71,20 @@ public class TranspositionTable {
     
     // Returns the information of the current state
     public SimpleState retrieve(){
-        //System.out.println(hash);
         SimpleState state = states.get(hash);
         return state;
     }
     
     public void store(Move bestMove, int bestScore, int type, int depthSearched) {
-        states.put(hash, new SimpleState(bestMove, bestScore, type, depthSearched));
+        SimpleState test = states.put(hash, new SimpleState(bestMove, bestScore, type, depthSearched));
+        /*
+        if(test != null) {
+            System.out.println("This::: bestMove: " + bestMove + " score "+ bestScore+" type: " + type +
+                    "depth: " + depthSearched);
+             System.out.println("replaces this::: bestMove: " + test.bestMove + " score "+ test.bestScore+"type: " + test.type +
+                    "depth: " + test.depthSearched);
+        }
+        */
     }
     
     // Returns the hash(index) for the current state
@@ -87,51 +94,106 @@ public class TranspositionTable {
     
     // Update the the current board by doing a certain move
     public void doMove(Move move) {
+        //System.out.println("hash at the start of doing: " + hash);
         int beginPiece = move.getBeginField();
         int endPiece = move.getEndField();
-        String stringOfMove = move.toString();
         
         // Update hash code
-        hash = hash ^ bitStrings[board[beginPiece]][beginPiece];
-        hash = hash ^ bitStrings[board[endPiece]][endPiece];
+        hash = hash ^ bitStrings[board[beginPiece]][beginPiece - 1];
+        hash = hash ^ bitStrings[board[endPiece]][endPiece - 1];
 
         // Update board
         board[endPiece] = board[beginPiece];
         board[beginPiece] = 0;
-            
-        if(stringOfMove.charAt(2) != dash ) {
-            // System.out.print("move: " + move + "is a different move: " + stringOfMove);
+        
+        if(move.getCaptureCount() > 0) {
             for(int i = 0; i < move.getCaptureCount();i++) {
                 int o = move.getCapturedField(i);
-                hash = hash ^ bitStrings[board[o]][o];
+                hash = hash ^ bitStrings[board[o]][o - 1];
                 board[o] = 0;
             }
         }
-        
+        //System.out.println("hash at the end of doing: " + hash);
     }
     
     // Update the the current board by undoing a certain move
     public void undoMove(Move move) {
+        //System.out.println("hash at the start of undoing: " + hash);
         int beginPiece = move.getBeginField();
         int endPiece = move.getEndField();
-        String stringOfMove = move.toString();
         
         // Update board
         board[beginPiece] = board[endPiece];
         board[endPiece] = 0;
 
         // Update hash code
-        hash = hash ^ bitStrings[board[beginPiece]][beginPiece];
-        hash = hash ^ bitStrings[board[endPiece]][endPiece];
+        hash = hash ^ bitStrings[board[beginPiece]][beginPiece - 1];
+        hash = hash ^ bitStrings[board[endPiece]][endPiece - 1];
             
-        if(stringOfMove.charAt(2) != dash ) {
+        if(move.getCaptureCount() > 0) {
             // System.out.print("move: " + move + "is a different move: " + stringOfMove);
-            for(int i = 0; i < move.getCaptureCount();i++) {
+            for(int i = move.getCaptureCount() - 1; i >= 0;i--) {
                 int o = move.getCapturedField(i);
                 board[o] = move.getCapturedPiece(i);
-                hash = hash ^ bitStrings[board[o]][o];
+                hash = hash ^ bitStrings[board[o]][o - 1];
             }
         }
+        //System.out.println("hash at the end of undoing: " + hash);
+    }
+    
+    public void doTestMove(Move move) {
+        int beginPiece = move.getBeginField();
+        int endPiece = move.getEndField();
+
+        System.out.println("start doing testmove: ");
+        System.out.println(hash);
+        // Update hash code
+        hash = hash ^ bitStrings[board[beginPiece]][beginPiece - 1];
+        System.out.println(hash);
+        hash = hash ^ bitStrings[board[endPiece]][endPiece - 1];
+        System.out.println(hash);
+
+        // Update board
+        board[endPiece] = board[beginPiece];
+        board[beginPiece] = 0;
+            
+        if(move.getCaptureCount() > 0) {
+            for(int i = 0; i < move.getCaptureCount();i++) {
+                int o = move.getCapturedField(i);
+                hash = hash ^ bitStrings[board[o]][o - 1];
+                System.out.println(hash);
+                board[o] = 0;
+            }
+        }
+        System.out.println("hash at the end of doingTest: " + hash);
+    }
+    
+    // Update the the current board by undoing a certain move
+    public void undoTestMove(Move move) {
+        int beginPiece = move.getBeginField();
+        int endPiece = move.getEndField();
+
+        System.out.println("start undoing move: ");
+        System.out.println(hash);
+        // Update board
+        board[beginPiece] = board[endPiece];
+        board[endPiece] = 0;
+
+        // Update hash code
+        hash = hash ^ bitStrings[board[beginPiece]][beginPiece - 1];
+        System.out.println(hash);
+        hash = hash ^ bitStrings[board[endPiece]][endPiece - 1];
+        System.out.println(hash);
+       if(move.getCaptureCount() > 0) {
+            // System.out.print("move: " + move + "is a different move: " + stringOfMove);
+            for(int i = move.getCaptureCount() - 1; i >= 0;i--) {
+                int o = move.getCapturedField(i);
+                board[o] = move.getCapturedPiece(i);
+                hash = hash ^ bitStrings[board[o]][o - 1];
+                System.out.println(hash);
+            }
+        }
+        System.out.println("hash at the end of undoingTest: " + hash);
     }
     
     public void add(int piece, int position) {
@@ -142,4 +204,20 @@ public class TranspositionTable {
         hash = hash ^ bitStrings[piece][position];
     }
     
+    public void setHash(int hash){
+        this.hash = hash;
+    }
+    
+    // For debugging
+    void printBoard () {
+        System.out.println("Print board:: ");
+        int index = 0;
+        for (int i : board) {
+            System.out.print(i + " ");
+            if (index % 5 == 0) {
+                System.out.println();
+            }
+            index++;
+        }
+    }
 }

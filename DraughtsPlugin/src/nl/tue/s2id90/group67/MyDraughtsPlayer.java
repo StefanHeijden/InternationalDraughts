@@ -61,12 +61,19 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         } catch (AIStoppedException ex) {  
             System.out.println("stopped");
         /* nothing to do */  }
-
+        
         if (bestMove==null) {
             System.err.println("no valid move found!");
             return getRandomValidMove(s);
         } else {
-            return bestMove;
+            
+            System.out.println("final check");
+            // Check in the end whether the move is a valid
+            List<Move> movelist = s.getMoves();
+            if(movelist.contains(bestMove)) {
+                return bestMove;
+            }
+            return getRandomValidMove(s);
         }
     }
 
@@ -112,69 +119,73 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
      int alphaBeta(DraughtsNode node, int alpha, int beta, int depth)
             throws AIStoppedException {
         // Stop the search if a certain amount of time has passed
+     
         if (stopped) {
             stopped = false;
             System.out.println("stopped in AlphaBeta");
             throw new AIStoppedException();
         }
+       
         int bestResult;
         boolean done = false;
         int hash = transpositionTable.getBoard();
-       
+        Move currentBestMove; 
         // Get the current state of the board
         DraughtsState state = node.getState();
         boolean whiteTurn = state.isWhiteToMove();
          
         // Get the information from the transposition table
         SimpleState information = transpositionTable.retrieve();// state
-            
+        // Get the current moves for the state
+        List<Move> newMoves = state.getMoves();
+
+        // If no moves are possible return the evaluation of the current state
+        if (depth == 0 || newMoves.isEmpty()) {
+            return evaluate(state);
+        }
+        
+        // Hier vindt je soms een move die helemaal niet mogelijk zou moeten zijn
+        // En die komt uit transposition table, maar waar die vandaan komt....------------!!!
+        boolean ok = true;
+        if(information != null && !newMoves.contains(information.bestMove)) {
+            //System.out.println("This move: " +  information.bestMove + " is not a legal move!!!");
+            ok = false;
+        }
+ 
         // If the information of the state has been calculated with enough depth 
         // then check if the information is valid
-        if(information != null && information.depthSearched >= depth) {
-            System.out.println("found a good move from the TT");
+        if(ok && information != null && information.depthSearched >= depth) {
             bestResult = information.bestScore;
             // If the move has been calculated exactly
             if(information.type == 0) {
-                System.out.println("and that move is calculated exaclty so we stop this branch");
+                node.setBestMove(information.bestMove);
                 return bestResult;
             }
             // If the move is a lower bound
             if(information.type == 1) {
                 if( bestResult >= beta) {
-                     return bestResult;
+                    node.setBestMove(information.bestMove);
+                    return bestResult;
                 }
                 alpha = Math.max(alpha, bestResult);
             }
             // If the move is an upper bound
             if(information.type == 2) {
                 if( bestResult <= alpha) {
-                     return bestResult;
+                    node.setBestMove(information.bestMove);
+                    return bestResult;
                 }
                 beta = Math.min(beta, bestResult);
             }
-        }else {
-            System.out.println();
         }
-        
-        // Get the current moves for the state
-        List<Move> newMoves = state.getMoves();
-
-        // If no moves are possible return the evaluation of the current state
-        if (depth == 0 || newMoves.isEmpty()) {
-            if(newMoves.isEmpty()) {
-                System.out.println("no more moves found");
-            }
-            return evaluate(state);
-        }
-        
-        Move currentBestMove;
         
         // Check the oldMove first
-        if(information != null && information.depthSearched >= 0) {     
-            System.out.println("check the move from TT first");
+        if(ok && information != null && information.depthSearched >= 0) {  
+
             state.doMove(information.bestMove);
             transpositionTable.doMove(information.bestMove);
             
+
             bestResult = alphaBeta(new DraughtsNode(state),
                    alpha, beta, depth - 1 );
             
@@ -184,12 +195,10 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
             currentBestMove = information.bestMove;
             if(whiteTurn) {
                 if(bestResult >= beta) {
-                System.out.println("since this is such a good move we stop bestResult:" + bestResult + " > = beta:  " + beta);
                 done = true;
             }
             }else {
                 if(bestResult <= alpha) {
-                    System.out.println("since this is such a good move we stop bestResult:" + bestResult + " > = beta:  " + beta);
                     done = true;
                 }
             }
@@ -208,18 +217,51 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         
         // Evaluate each possible move for the state of the board
         while (!newMoves.isEmpty() && !done) { // Continue untill no new moves are found
+            // Set the state of the board to after doing the next move in the list
+            
+            
+            // waarvoor dit is, is dat soms the hash function anders eruit komt
+            // nadat een move is gedaan en teruggezet is
+            // ik had al gekeken en probleem (voor zover ik het kan zien) ligt niet aan
+            // transposition.doing / undoing maar aan het feit dat de board[] in 
+            // transposition table niet overeenkomt met de state.getPieces()
+            
+            /*
+            int testHash = transpositionTable.getBoard();
             DraughtsState testState = state;
-            // Set the state of the board to after doing the next move in the list
+            printState(state);
+            transpositionTable.printBoard();
+            // DO
             state.doMove(newMoves.get(0));
-            transpositionTable.doMove(newMoves.get(0));
+            transpositionTable.doTestMove(newMoves.get(0));
+            printState(state);
+            transpositionTable.printBoard();
+            // UNDO
             state.undoMove(newMoves.get(0));
-            transpositionTable.undoMove(newMoves.get(0));
-            if(testState != state) {
-                System.out.println("NOT THE SAME STATEEEEEEEEEEE!!!!!!!!!!!");
+            transpositionTable.undoTestMove(newMoves.get(0)); 
+            printState(state);
+            transpositionTable.printBoard();
+            
+            int newHash = transpositionTable.getBoard();
+            if (testState != state || testHash != newHash) {
+                System.out.println("this move isn't handled correctly: " + newMoves.get(0) + " "
+                        + "----------------------------------------------------------------"
+                        + "-----------------------------------------------------------!!!");
+                System.out.println("Hash: " + hash + " old hash: " + newHash);
+                transpositionTable.setHash(hash);
+                
+                state.doMove(newMoves.get(0));
+                transpositionTable.doTestMove(newMoves.get(0));
+                state.undoMove(newMoves.get(0));
+                transpositionTable.undoTestMove(newMoves.get(0));
+                
+                System.out.println("stop: " + transpositionTable.getBoard());
             }
+            */
             // Set the state of the board to after doing the next move in the list
             state.doMove(newMoves.get(0));
             transpositionTable.doMove(newMoves.get(0));
+            
             if(whiteTurn) {
                 // Get the best move of the opponent
                 int newResult = alphaBeta(new DraughtsNode(state),
@@ -230,7 +272,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
                     currentBestMove = newMoves.get(0);
                     bestResult = newResult;
                 }
-                // -----------------------------------------------------------?????
+                
                 if (bestResult >= beta) {
                     node.setBestMove(newMoves.get(0));
                     bestResult = newResult;
@@ -248,11 +290,10 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
                     currentBestMove = newMoves.get(0);
                     bestResult = newResult;
                 }
-                // -----------------------------------------------------------?????
+                
                 if (bestResult <= alpha) {
                     node.setBestMove(newMoves.get(0));
                     bestResult = newResult;
-                    //System.out.println("since this is such a good move in FORLOOP we stop bestResult:" + bestResult + " > = beta:  " + beta);
                     done = true;
                 }
 
@@ -278,11 +319,13 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
               type = 0; // exact
             }
         }
+        /*
         /// TESTING PURPOSE --------------------------------------------!!!!!!!!
         if(hash != transpositionTable.getBoard()) {
             System.out.println("hash not the same!! oldhash: " + 
                     hash + " new " + transpositionTable.getBoard() );
         }
+        */
         transpositionTable.store( currentBestMove, bestResult, type, depth);
         // Save the best move and alpha of that move
         node.setBestMove(currentBestMove);
@@ -318,5 +361,17 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
 
         }
         return computedValue ;
+    }
+    
+    void printState (DraughtsState state) {
+        System.out.println("Print state:: ");
+        int index = 0;
+        for (int i : state.getPieces()) {
+            System.out.print(i + " ");
+            if (index % 5 == 0) {
+                System.out.println();
+            }
+            index++;
+        }
     }
 }
