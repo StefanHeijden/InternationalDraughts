@@ -18,14 +18,16 @@ import java.lang.Math.*;
 //       for your player during the tournament
 public class MyDraughtsPlayer  extends DraughtsPlayer{
     private int bestValue=0;
-    int maxSearchDepth;
+    int kingWorth;
+    boolean improved;
     
     /** boolean that indicates that the GUI asked the player to stop thinking. */
     private boolean stopped;
 
-    public MyDraughtsPlayer(int maxSearchDepth) {
+    public MyDraughtsPlayer(int kingWorth, boolean improved) {
         super("best.png"); // ToDo: replace with your own icon
-        this.maxSearchDepth = maxSearchDepth;
+        this.kingWorth = kingWorth;
+        this.improved = improved;
     }
     
     @Override public Move getMove(DraughtsState s) {
@@ -70,6 +72,10 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
        return bestValue;
     }
 
+    @Override
+    public String getName() {
+        return "King: " + kingWorth + " Improved: " + improved;
+    }
     /** Tries to make alphabeta search stop. Search should be implemented such that it
      * throws an AIStoppedException when boolean stopped is set to true;
     **/
@@ -221,24 +227,50 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         // compute a value for t h i s s t a t e , e . g .
         // by comparing p[ i ] to WHITEPIECE, WHITEKING, e t c
         int computedValue = 0;
+        int nPieces = 0;
+        int nSpot = 1;
+        boolean middle = false;
         for (int piece : pieces) {
-        switch (piece) {
-            case 0: // empty spot
-                break;
-            case DraughtsState.WHITEPIECE: // piece is a white piece
-                computedValue++;
-                break;
-            case DraughtsState.BLACKPIECE: // piece is a black piece
-                computedValue--;
-                break;
-            case DraughtsState.WHITEKING: // piece is a white king
-                computedValue = computedValue + 2;
-                break;
-            case DraughtsState.BLACKKING: // piece is a black king
-                computedValue = computedValue - 2;
-                break;
-        }         
-            
+            switch (piece) {
+                case 0: // empty spot
+                    break;
+                case DraughtsState.WHITEPIECE: // piece is a white piece
+                    computedValue = computedValue + 10;
+                    if (middle && improved) {
+                        computedValue++;
+                    }
+                    nPieces++;
+                    break;
+                case DraughtsState.BLACKPIECE: // piece is a black piece
+                    computedValue = computedValue - 10;
+                    if (middle && improved) {
+                        computedValue--;
+                    }
+                    nPieces++;
+                    break;
+                case DraughtsState.WHITEKING: // piece is a white king
+                    computedValue = computedValue + kingWorth;
+                    nPieces++;  
+                    break;
+                case DraughtsState.BLACKKING: // piece is a black king
+                    computedValue = computedValue - kingWorth;
+                    nPieces++;
+                    break;
+            }         
+            nSpot++;
+            if (nSpot == 21 || nSpot == 27) {
+                middle = true;
+            } else if (nSpot == 26 || nSpot == 31) {
+                middle = false;
+            }
+        }
+        if (improved) {
+            if (computedValue < -19) {
+                computedValue = computedValue - nPieces / 4;
+            } else if (computedValue > 19) {
+                computedValue = computedValue + nPieces / 4;
+            }
+                
         }
         return computedValue ;
     }
