@@ -18,7 +18,7 @@ import org10x10.dam.game.Move;
 public class MyDraughtsPlayer  extends DraughtsPlayer{
     private int bestValue=0;
     int maxSearchDepth;
-
+    TranspositionTable transpositionTable;
 
     /** boolean that indicates that the GUI asked the player to stop thinking. */
     private boolean stopped;
@@ -31,14 +31,17 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
     @Override public Move getMove(DraughtsState s) {
         Move bestMove = null;
         bestValue = 0;
+        maxSearchDepth = 20;
         DraughtsNode node = new DraughtsNode(s);    // the root of the search tree
+        transpositionTable = new TranspositionTable();
+        transpositionTable.setBoard(s.getPieces(), s.isWhiteToMove());
         try {
             // Iterative Deepening on AlphaBeta
             int depth = 1;
 
-            while(depth <= 11) {
+            while(depth <= maxSearchDepth) {
                 // compute bestMove and bestValue in a call to alphabeta
-                if (node.getState().isWhiteToMove()) {
+                if (s.isWhiteToMove()) {
                     bestValue = alphaBeta(node, MIN_VALUE, MAX_VALUE, depth);
                 }else {
                     bestValue =  -1 * alphaBeta(node, MIN_VALUE, MAX_VALUE, depth);
@@ -56,7 +59,9 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
                 // Increase depth
                 depth++;
             }
-        } catch (AIStoppedException ex) {  /* nothing to do */  }
+        } catch (AIStoppedException ex) {  
+            System.out.println("stopped");
+        /* nothing to do */  }
 
         if (bestMove==null) {
             System.err.println("no valid move found!");
@@ -110,7 +115,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
         // Stop the search if a certain amount of time has passed
         if (stopped) {
             stopped = false;
-            System.out.println("stopped in AlphaBetaMax");
+            System.out.println("stopped in AlphaBeta");
             throw new AIStoppedException();
         }
         int oldAlpha = alpha;
@@ -216,7 +221,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
      }
     
     // Here we retreive the information of a certain state from the transposition table
-    int[] retrieveInformation(int state) {
+    int[] retrieveInformation(int state, boolean isWhiteToMove) {
         boolean found = false;
         // try finding state in transposition table
         if(found) {

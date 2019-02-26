@@ -13,7 +13,7 @@ public class TranspositionTable {
     private int hash;
     private int[][] bitStrings;
     private int isWhiteToMove;
-    private int[][] states = new int [Integer.MAX_VALUE][3];
+    private SimpleState[] states = new SimpleState [Integer.MAX_VALUE];
     
     TranspositionTable() {
         bitStrings = new int[5][50];
@@ -36,8 +36,8 @@ public class TranspositionTable {
         return hash;
     }
     
-    public int[] getInformation(){
-        if(states[hash][0] != 0) {
+    public SimpleState getInformation(){
+        if(states[hash] != null) {
             return states[hash];
         }
         return null;
