@@ -41,8 +41,11 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
 
             while(depth <= maxSearchDepth) {
                 // compute bestMove and bestValue in a call to alphabeta
+                int[] pieces = s.getPieces();
                 bestValue = alphaBeta(node, MIN_VALUE, MAX_VALUE, depth);
-
+                if(pieces != s.getPieces()) {
+                    System.out.println("error");
+                }
                 // store the bestMove found uptill now
                 // NB this is not done in case of an AIStoppedException in alphaBeat()
                 bestMove  = node.getBestMove();
@@ -70,6 +73,7 @@ public class MyDraughtsPlayer  extends DraughtsPlayer{
             System.out.println("final check");
             // Check in the end whether the move is a valid
             List<Move> movelist = s.getMoves();
+            printState(s);
             if(movelist.contains(bestMove)) {
                 return bestMove;
             }
